@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-unique-phone-nr
+      author: stivka
+      changes:
+        - addUniqueConstraint:
+            tableName: account
+            columnNames: phone_nr
+            constraintName: uq_account_phone_nr

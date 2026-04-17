@@ -4,9 +4,11 @@ import ee.stivka.account.api.AccountRequest;
 import ee.stivka.account.api.AccountResponse;
 import ee.stivka.account.domain.Account;
 import ee.stivka.account.repository.AccountRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @Transactional
 public class AccountService {
@@ -21,39 +23,34 @@ public class AccountService {
     Account account = new Account();
     account.setName(request.name());
     account.setPhoneNr(request.phoneNr());
-    return toResponse(repository.save(account));
+    Account saved = repository.saveAndFlush(account);
+    log.info("Created account {}", saved.getId());
+    return AccountResponse.from(saved);
   }
 
   @Transactional(readOnly = true)
   public AccountResponse get(Long id) {
-    return toResponse(find(id));
+    return AccountResponse.from(find(id));
   }
 
   public AccountResponse update(Long id, AccountRequest request) {
     Account account = find(id);
     account.setName(request.name());
     account.setPhoneNr(request.phoneNr());
-    return toResponse(repository.save(account));
+    Account saved = repository.saveAndFlush(account);
+    log.info("Updated account {}", saved.getId());
+    return AccountResponse.from(saved);
   }
 
   public void delete(Long id) {
-    if (!repository.existsById(id)) {
+    if (repository.removeById(id) == 0) {
       throw new NotFoundException("Account %d not found".formatted(id));
     }
-    repository.deleteById(id);
+    log.info("Deleted account {}", id);
   }
 
   private Account find(Long id) {
     return repository.findById(id)
         .orElseThrow(() -> new NotFoundException("Account %d not found".formatted(id)));
-  }
-
-  private static AccountResponse toResponse(Account account) {
-    return new AccountResponse(
-        account.getId(),
-        account.getName(),
-        account.getPhoneNr(),
-        account.getCreatedDtime(),
-        account.getModifiedDtime());
   }
 }

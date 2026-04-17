@@ -14,7 +14,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import ee.stivka.account.repository.AccountRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +34,7 @@ class AccountControllerIT {
   @Autowired
   private AccountRepository repository;
 
-  private final ObjectMapper objectMapper = JsonMapper.builder().build();
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   private MockMvc mockMvc;
 
@@ -71,8 +70,6 @@ class AccountControllerIT {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value((int) id))
         .andExpect(jsonPath("$.name").value("Alice"));
-
-    Thread.sleep(10);
 
     String updateBody = """
         {"name":"Alicia","phoneNr":"+3725559999"}
@@ -132,6 +129,22 @@ class AccountControllerIT {
   }
 
   @Test
+  void create_malformedJson_returns400() throws Exception {
+    mockMvc.perform(post("/accounts")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{bad json"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("MALFORMED_JSON"));
+  }
+
+  @Test
+  void get_invalidIdType_returns400() throws Exception {
+    mockMvc.perform(get("/accounts/abc"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_PARAMETER"));
+  }
+
+  @Test
   void get_unknownId_returns404() throws Exception {
     mockMvc.perform(get("/accounts/9999"))
         .andExpect(status().isNotFound())
@@ -153,6 +166,23 @@ class AccountControllerIT {
   void delete_unknownId_returns404() throws Exception {
     mockMvc.perform(delete("/accounts/9999"))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void create_duplicatePhone_returns409() throws Exception {
+    String body = """
+        {"name":"Alice","phoneNr":"+3725551234"}
+        """;
+    mockMvc.perform(post("/accounts")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(post("/accounts")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("CONFLICT"));
   }
 
   @Test

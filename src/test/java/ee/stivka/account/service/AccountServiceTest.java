@@ -43,7 +43,7 @@ class AccountServiceTest {
 
   @Test
   void create_persistsAndReturnsResponse() {
-    when(repository.save(any(Account.class))).thenReturn(stored);
+    when(repository.saveAndFlush(any(Account.class))).thenReturn(stored);
 
     AccountResponse response = service.create(new AccountRequest("Alice", "+3725551234"));
 
@@ -74,13 +74,13 @@ class AccountServiceTest {
   @Test
   void update_mutatesAndSaves() {
     when(repository.findById(42L)).thenReturn(Optional.of(stored));
-    when(repository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(repository.saveAndFlush(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
 
     AccountResponse response = service.update(42L, new AccountRequest("Alicia", null));
 
     assertThat(response.name()).isEqualTo("Alicia");
     assertThat(response.phoneNr()).isNull();
-    verify(repository).save(stored);
+    verify(repository).saveAndFlush(stored);
   }
 
   @Test
@@ -89,24 +89,23 @@ class AccountServiceTest {
 
     assertThatThrownBy(() -> service.update(99L, new AccountRequest("X", null)))
         .isInstanceOf(NotFoundException.class);
-    verify(repository, never()).save(any());
+    verify(repository, never()).saveAndFlush(any());
   }
 
   @Test
   void delete_invokesRepository() {
-    when(repository.existsById(42L)).thenReturn(true);
+    when(repository.removeById(42L)).thenReturn(1);
 
     service.delete(42L);
 
-    verify(repository).deleteById(42L);
+    verify(repository).removeById(42L);
   }
 
   @Test
   void delete_missingIdThrowsNotFound() {
-    when(repository.existsById(99L)).thenReturn(false);
+    when(repository.removeById(99L)).thenReturn(0);
 
     assertThatThrownBy(() -> service.delete(99L))
         .isInstanceOf(NotFoundException.class);
-    verify(repository, never()).deleteById(any());
   }
 }
