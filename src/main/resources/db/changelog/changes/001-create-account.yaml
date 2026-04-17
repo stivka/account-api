@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-account
+      author: stivka
+      changes:
+        - createTable:
+            tableName: account
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: phone_nr
+                  type: VARCHAR(32)
+              - column:
+                  name: created_dtime
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: modified_dtime
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
