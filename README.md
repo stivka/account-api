@@ -60,6 +60,17 @@ Location: /accounts/1
 
 ### Validation
 
+The assignment description under /docs states for only the field phoneNr, that it is optional, 
+therefore I presume name and the rest of the fields must have a non null value.
+
+Also there are no prescriptions uniqueness constraints. Neither that name should be unique, 
+nor that phoneNr nor that name + phoneNr.
+
+I took the liberty to add a uniqueness constraint for phoneNr, because "nimemakse" was mentioned and since that implies 
+that only one account can be tied to a phone number. I thought this would make the assignment slightly more realistic 
+and reflect some consideration of the domain. Beyond that, I did not introduce any additional constraints, so as to stay 
+aligned with the task description.
+
 - `name` — required, non-blank
 - `phoneNr` — optional; when present must match `^\+?[1-9]\d{6,14}$` (E.164-ish)
 
