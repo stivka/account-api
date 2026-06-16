@@ -4,6 +4,8 @@ import ee.stivka.account.api.AccountRequest;
 import ee.stivka.account.api.AccountResponse;
 import ee.stivka.account.domain.Account;
 import ee.stivka.account.repository.AccountRepository;
+import java.util.Comparator;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,5 +54,16 @@ public class AccountService {
   private Account find(Long id) {
     return repository.findById(id)
         .orElseThrow(() -> new NotFoundException("Account %d not found".formatted(id)));
+  }
+
+  @Transactional(readOnly = true)
+  public List<String> searchByName(String query) {
+    String normalizedQuery = query.trim().toLowerCase();
+
+    return repository.findAll().stream()
+        .map(Account::getName)
+        .filter(name -> name.toLowerCase().contains(normalizedQuery))
+        .sorted(Comparator.naturalOrder())
+        .toList();
   }
 }

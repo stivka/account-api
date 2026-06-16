@@ -1,6 +1,7 @@
 package ee.stivka.account.api;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -14,33 +15,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import ee.stivka.account.domain.Account;
 import ee.stivka.account.repository.AccountRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
+
+import java.util.List;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 class AccountControllerIT {
 
   @Autowired
-  private WebApplicationContext context;
+  private MockMvc mockMvc;
 
   @Autowired
   private AccountRepository repository;
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  private MockMvc mockMvc;
-
   @BeforeEach
   void setUp() {
-    mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     repository.deleteAll();
   }
 
@@ -102,6 +103,19 @@ class AccountControllerIT {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
         .andExpect(jsonPath("$.errors[0].field").value("name"));
+  }
+
+  @Test
+  void create_nameWithOuterWhitespace_trimsName() throws Exception {
+    String body = """
+        {"name":"  Alice  ","phoneNr":"+3725554321"}
+        """;
+
+    mockMvc.perform(post("/accounts")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.name").value("Alice"));
   }
 
   @Test
@@ -192,5 +206,31 @@ class AccountControllerIT {
         .andExpect(content().contentTypeCompatibleWith("application/json"))
         .andExpect(jsonPath("$.paths./accounts.post").value(notNullValue()))
         .andExpect(jsonPath("$.paths./accounts/{id}.get").value(notNullValue()));
+  }
+
+  @Test
+  void find_onlyAccountsWithMatchingNamesToSearchParam() throws Exception {
+    Account alice = account("Alice", "+3725555550");
+    Account jaan = account("Jaan", "+3725555551");
+    Account jaan2 = account("Jaan", "+3725555552");
+    Account jaanus = account("Jaanus", "+3725555553");
+
+    repository.saveAllAndFlush(List.of(alice, jaan, jaan2, jaanus));
+
+    mockMvc.perform(get("/accounts")
+            .param("name", "jaan"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith("application/json"))
+        .andExpect(jsonPath("$", hasSize(3)))
+        .andExpect(jsonPath("$[0]").value("Jaan"))
+        .andExpect(jsonPath("$[1]").value("Jaan"))
+        .andExpect(jsonPath("$[2]").value("Jaanus"));
+  }
+
+  private static Account account(String name, String phoneNr) {
+    Account account = new Account();
+    account.setName(name);
+    account.setPhoneNr(phoneNr);
+    return account;
   }
 }
